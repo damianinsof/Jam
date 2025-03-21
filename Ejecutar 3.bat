@@ -4,7 +4,7 @@
 @echo ****************************************
 
 ::@cd  C:\Users\damia\desktop\lolo\front\dist
-@cd  C:\Users\damia\Desktop\lolo\ParaLolo\Front
+@cd  C:\sistemas\Front
 cmd /k "serve -s ."
 
 :: cmd /k "serve -s ."

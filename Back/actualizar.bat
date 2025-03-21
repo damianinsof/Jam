@@ -1,2 +1,2 @@
-cd c:\sistemas
+cd c:\sistemas\jam
 git pull

@@ -1,8 +1,8 @@
+@echo off
 @echo *********  Bienvenido Lolo !!! *********
 @echo **     Programa Master Inicializado   **
 @echo ****************************************
 
-@echo off
 ::cd /d "C:\Program Files\xampp"
 cd /d "C:\xampp"
 start xampp-control.exe

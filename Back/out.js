@@ -70117,9 +70117,10 @@ var require_serviceVentas = __commonJS({
       return res;
     };
     var esNumericoCuit = (cuit) => {
-      return typeof cuit === "number";
+      return /^[0-9]+$/.test(cuit);
     };
     var noExisteCuit = async (cuit) => {
+      console.log(cuit);
       if (esNumericoCuit(cuit)) {
         const sql = "SELECT CASE WHEN exists(select * from ENTIDAD where Cuit= ? ) THEN 1 else 0 end as existe ";
         const res = await (await conn).execute(sql, [cuit]);
@@ -70160,6 +70161,7 @@ var require_serviceVentas = __commonJS({
       }
     };
     var createEntidad = async (Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, telefono, Contacto1, Contacto2) => {
+      console.log("ee", Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, telefono, Contacto1, Contacto2);
       try {
         const cuitValido = await noExisteCuit(cuit);
         if (cuitValido !== "OK") {
@@ -70167,6 +70169,7 @@ var require_serviceVentas = __commonJS({
         }
         const sql = "INSERT into entidad (Tipo,Denominacion,RazonSocial, Iva,Domicilio,Localidad,Provincia,Transporte,Email,Dni,cuit,telefono,contacto1,contacto2) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
         const res = await (await conn).execute(sql, [Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, telefono, Contacto1, Contacto2]);
+        console.log(res[0]);
         return res[0];
       } catch (e) {
         return false;

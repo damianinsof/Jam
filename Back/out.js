@@ -70116,14 +70116,11 @@ var require_serviceVentas = __commonJS({
       const res = users.find((p) => p.user === user && p.password === password) !== void 0;
       return res;
     };
-    var esNumericoCuit = (cuit) => {
-      return /^[0-9]+$/.test(cuit);
-    };
-    var noExisteCuit = async (cuit) => {
-      console.log(cuit);
-      if (esNumericoCuit(cuit)) {
+    var noExisteCuit = async (Cuit) => {
+      console.log(Cuit);
+      if (/^[0-9]+$/.test(Cuit)) {
         const sql = "SELECT CASE WHEN exists(select * from ENTIDAD where Cuit= ? ) THEN 1 else 0 end as existe ";
-        const res = await (await conn).execute(sql, [cuit]);
+        const res = await (await conn).execute(sql, [Cuit]);
         console.log("existe ?? ", res[0][0].existe);
         if (res[0][0].existe == 0) {
           return "OK";
@@ -70134,25 +70131,25 @@ var require_serviceVentas = __commonJS({
         return "Formato C.U.I.T. debe ser num\xE9rico";
       }
     };
-    var estadoEntidad = async (cuit) => {
-      const resp = await noExisteCuit(cuit);
+    var estadoEntidad = async (Cuit) => {
+      const resp = await noExisteCuit(Cuit);
       if (resp.includes("ingresado")) {
         console.log("ya se ingreso");
         const sql = "SELECT Activo from ENTIDAD where Cuit= ?";
-        const res = await (await conn).execute(sql, [cuit]);
+        const res = await (await conn).execute(sql, [Cuit]);
         if (res[0].length > 0) {
           console.log(res[0]);
           return res[0][0].Activo;
-        } else return "N\xFAmero de CUIT inexistente";
+        } else return "N\xFAmero de Cuit inexistente";
       } else {
         return resp;
       }
     };
-    var actualizarEstadoEntidad = async (estado, cuit) => {
-      const resp = await noExisteCuit(cuit);
+    var actualizarEstadoEntidad = async (estado, Cuit) => {
+      const resp = await noExisteCuit(Cuit);
       if (resp.includes("ingresado")) {
         const sql = "UPDATE ENTIDAD SET Activo =  ?  where Cuit= ?";
-        const res = await (await conn).execute(sql, [estado, cuit]);
+        const res = await (await conn).execute(sql, [estado, Cuit]);
         if (res[0].affectedRows == 1) {
           return true;
         } else return false;
@@ -70160,16 +70157,12 @@ var require_serviceVentas = __commonJS({
         return false;
       }
     };
-    var createEntidad = async (Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, telefono, Contacto1, Contacto2) => {
-      console.log("ee", Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, telefono, Contacto1, Contacto2);
+    var createEntidad = async (Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2) => {
+      console.log("tipo:", Tipo, "den:", Denominacion, "rs:", RazonSocial, "iva:", Iva, "dom:", Domicilio, "loc:", Localidad, "prov:", Provincia, "tran:", Transporte, "emai:", Email, "dni:", Dni, "Cuit:", Cuit, "tel:", Telefono, "C1:", Contacto1, "C2:", Contacto2);
       try {
-        const cuitValido = await noExisteCuit(cuit);
-        if (cuitValido !== "OK") {
-          throw new error(cuitValido);
-        }
-        const sql = "INSERT into entidad (Tipo,Denominacion,RazonSocial, Iva,Domicilio,Localidad,Provincia,Transporte,Email,Dni,cuit,telefono,contacto1,contacto2) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-        const res = await (await conn).execute(sql, [Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, telefono, Contacto1, Contacto2]);
-        console.log(res[0]);
+        const sql = "INSERT into entidad (Tipo,Denominacion,RazonSocial, Iva,Domicilio,Localidad,Provincia,Transporte,Email,Dni,Cuit,Telefono,Contacto1,Contacto2) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
+        const res = await (await conn).query(sql, [Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2]);
+        console.log("resp insert createenidad", res);
         return res[0];
       } catch (e) {
         return false;
@@ -70872,11 +70865,13 @@ var require_ventasController = __commonJS({
       }
     };
     var insertarEntidad = async (req, res) => {
-      const { tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, Telefono, Contacto1, Contacto2 } = req.body;
-      const check = await noExisteCuit(cuit);
-      if (check === "OK") {
+      const { Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2 } = req.body;
+      console.log("controller insertarEntidad", Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2);
+      const check = await noExisteCuit(Cuit);
+      console.log("check noexistecuit- controller", check);
+      if (check == "OK") {
         try {
-          const resp = await createEntidad(tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, cuit, Telefono, Contacto1, Contacto2);
+          const resp = await createEntidad(Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2);
           console.log(resp);
           if (resp.insertId > 0) {
             res.status(200).json({ Ok: true, "Registro nro:": resp.insertId, message: "Entidad nueva ha sido Registrada exitosamente!" });

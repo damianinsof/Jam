@@ -90,3 +90,6 @@ CREATE TABLE `relacionentidad` (
   `NroCli` varchar(100) NOT NULL 
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish2_ci;
 
+CREATE VIEW entidad_provedor as select * FROM entidad where tipo = "Provedor";
+CREATE VIEW entidad_cliente as select * FROM entidad where tipo = "Cliente";
+CREATE VIEW entidad_viajante as select * FROM entidad where tipo = "Viajante";

@@ -12,7 +12,7 @@ start xampp-control.exe
 cd /d "C:\sistemas\jam"
 git pull
 @echo Actualizando ........
-timeout /t 10 /nobreak
+timeout /t 15 /nobreak
 @echo off
 
 :: Ruta del archivo a copiar
@@ -27,7 +27,7 @@ if exist "%source_file%" (
     copy "%source_file%" "%destination_dir%"
     echo Archivo .env copiado exitosamente.
 ) else (
-    echo falta menos lolo..aguantá.
+    echo falta menos lolo..aguantá...
 )
 cd /d "C:\sistemas\jam"
 

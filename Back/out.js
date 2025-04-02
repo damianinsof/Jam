@@ -22234,7 +22234,7 @@ var require_package = __commonJS({
   "node_modules/dotenv/package.json"(exports2, module2) {
     module2.exports = {
       name: "dotenv",
-      version: "16.4.5",
+      version: "16.4.7",
       description: "Loads environment variables from .env file",
       main: "lib/main.js",
       types: "lib/main.d.ts",
@@ -22255,10 +22255,9 @@ var require_package = __commonJS({
       scripts: {
         "dts-check": "tsc --project tests/types/tsconfig.json",
         lint: "standard",
-        "lint-readme": "standard-markdown",
         pretest: "npm run lint && npm run dts-check",
-        test: "tap tests/*.js --100 -Rspec",
-        "test:coverage": "tap --coverage-report=lcov",
+        test: "tap run --allow-empty-coverage --disable-coverage --timeout=60000",
+        "test:coverage": "tap run --show-full-coverage --timeout=60000 --coverage-report=lcov",
         prerelease: "npm test",
         release: "standard-version"
       },
@@ -22279,15 +22278,12 @@ var require_package = __commonJS({
       readmeFilename: "README.md",
       license: "BSD-2-Clause",
       devDependencies: {
-        "@definitelytyped/dtslint": "^0.0.133",
         "@types/node": "^18.11.3",
-        decache: "^4.6.1",
+        decache: "^4.6.2",
         sinon: "^14.0.1",
         standard: "^17.0.0",
-        "standard-markdown": "^7.1.0",
         "standard-version": "^9.5.0",
-        tap: "^16.3.0",
-        tar: "^6.1.11",
+        tap: "^19.2.0",
         typescript: "^4.8.4"
       },
       engines: {
@@ -44901,10 +44897,10 @@ var require_promise = __commonJS({
 // src/config/dbConfig.js
 var require_dbConfig = __commonJS({
   "src/config/dbConfig.js"(exports2, module2) {
-    var { createConnection } = require_promise();
+    var { createPool } = require_promise();
     var dotenv2 = require_main();
     dotenv2.config();
-    var conn = createConnection({
+    var pool = createPool({
       host: process.env.MYSQLDB_HOST,
       user: process.env.MYSQLDB_USER,
       password: process.env.MYSQLDB_PASSWORD,
@@ -44913,14 +44909,14 @@ var require_dbConfig = __commonJS({
       connectionLimit: 3,
       connectTimeout: 1e4,
       maxIdle: 10,
-      // max idle connections, the default value is the same as `connectionLimit`
+      // Máximo de conexiones inactivas
       idleTimeout: 8e4,
-      // idle connections timeout, in milliseconds, the default value 60000
+      // Tiempo de espera para conexiones inactivas
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0
     });
-    module2.exports = { conn };
+    module2.exports = { pool };
   }
 });
 
@@ -70052,17 +70048,17 @@ var require_dayjs_min = __commonJS({
 // src/services/serviceVentas.js
 var require_serviceVentas = __commonJS({
   "src/services/serviceVentas.js"(exports2, module2) {
-    var dotenv2 = require_main();
-    var { conn } = require_dbConfig();
+    var { pool } = require_dbConfig();
     var XlsxPopulate = require_XlsxPopulate();
     var { error } = require("console");
-    var dayjs = require_dayjs_min();
+    var dotenv2 = require_main();
     var { json } = require_body_parser();
+    var dayjs = require_dayjs_min();
     dotenv2.config();
     var fecha = dayjs();
     async function sqlSingle(sql) {
       try {
-        const resp = await (await conn).execute(sql);
+        const resp = await (await pool).execute(sql);
         if (resp[0].length > 0) {
           return resp[0];
         } else {
@@ -70120,7 +70116,7 @@ var require_serviceVentas = __commonJS({
       console.log(Cuit);
       if (/^[0-9]+$/.test(Cuit)) {
         const sql = "SELECT CASE WHEN exists(select * from ENTIDAD where Cuit= ? ) THEN 1 else 0 end as existe ";
-        const res = await (await conn).execute(sql, [Cuit]);
+        const res = await (await pool).execute(sql, [Cuit]);
         console.log("existe ?? ", res[0][0].existe);
         if (res[0][0].existe == 0) {
           return "OK";
@@ -70136,7 +70132,7 @@ var require_serviceVentas = __commonJS({
       if (resp.includes("ingresado")) {
         console.log("ya se ingreso");
         const sql = "SELECT Activo from ENTIDAD where Cuit= ?";
-        const res = await (await conn).execute(sql, [Cuit]);
+        const res = await (await pool).execute(sql, [Cuit]);
         if (res[0].length > 0) {
           console.log(res[0]);
           return res[0][0].Activo;
@@ -70149,7 +70145,7 @@ var require_serviceVentas = __commonJS({
       const resp = await noExisteCuit(Cuit);
       if (resp.includes("ingresado")) {
         const sql = "UPDATE ENTIDAD SET Activo =  ?  where Cuit= ?";
-        const res = await (await conn).execute(sql, [estado, Cuit]);
+        const res = await (await pool).execute(sql, [estado, Cuit]);
         if (res[0].affectedRows == 1) {
           return true;
         } else return false;
@@ -70161,8 +70157,22 @@ var require_serviceVentas = __commonJS({
       console.log("tipo:", Tipo, "den:", Denominacion, "rs:", RazonSocial, "iva:", Iva, "dom:", Domicilio, "loc:", Localidad, "prov:", Provincia, "tran:", Transporte, "emai:", Email, "dni:", Dni, "Cuit:", Cuit, "tel:", Telefono, "C1:", Contacto1, "C2:", Contacto2);
       try {
         const sql = "INSERT into entidad (Tipo,Denominacion,RazonSocial, Iva,Domicilio,Localidad,Provincia,Transporte,Email,Dni,Cuit,Telefono,Contacto1,Contacto2) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-        const res = await (await conn).query(sql, [Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2]);
+        const res = await (await pool).query(sql, [Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2]);
         console.log("resp insert createenidad", res);
+        return res[0];
+      } catch (e) {
+        return false;
+      }
+    };
+    var updateEntidad = async (idEntidad, Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2) => {
+      console.log("id:", idEntidad, "tipo:", Tipo, "den:", Denominacion, "rs:", RazonSocial, "iva:", Iva, "dom:", Domicilio, "loc:", Localidad, "prov:", Provincia, "tran:", Transporte, "emai:", Email, "dni:", Dni, "Cuit:", Cuit, "tel:", Telefono, "C1:", Contacto1, "C2:", Contacto2);
+      if (idEntidad == void 0 || idEntidad == null || idEntidad == 0) {
+        return false;
+      }
+      try {
+        const sql = "UPDATE entidad set Tipo = ? ,Denominacion= ?,RazonSocial= ?, Iva= ?,Domicilio= ?,Localidad= ?,Provincia= ?,Transporte= ?,Email= ?,Dni= ?,Cuit= ?,Telefono= ?,Contacto1= ?,Contacto2= ? WHERE idEntidad = ? ;";
+        const res = await (await pool).query(sql, [Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2, idEntidad]);
+        console.log("resp update entidad", res);
         return res[0];
       } catch (e) {
         return false;
@@ -70171,7 +70181,7 @@ var require_serviceVentas = __commonJS({
     var obtenerListado = async (idProv) => {
       const sql = "SELECT l.Nombre,l.Fecha,l.Promo,l.idListado,ld.idLisDet,ld.Articulo,ld.CantxBulto,ld.CantParcial,ld.Descripcion,ld.CajaxPalets,ld.Oferta,ld.Precio,ld.Disponible,ld.Descuento,ld.Neto FROM listado l join lisdet ld on l.idListado = ld.idListado WHERE l.idEntidad = ? ;";
       try {
-        const res = await (await conn).query(sql, [idProv]);
+        const res = await (await pool).query(sql, [idProv]);
         console.log("ObtenerListado", res[0]);
         return res[0];
       } catch (error2) {
@@ -70181,7 +70191,7 @@ var require_serviceVentas = __commonJS({
     var actualizarListado = async (nombre, promo, fecha2, idEntidad) => {
       const sql = "INSERT INTO listado (nombre, Promo,Fecha, idEntidad) VALUES (?,?,STR_TO_DATE( ? , '%d/%m/%Y'),?);";
       try {
-        const [result] = await (await conn).execute(sql, [nombre, promo, fecha2, idEntidad]);
+        const [result] = await (await pool).execute(sql, [nombre, promo, fecha2, idEntidad]);
         const idLis = result.insertId;
         if (!idLis || idLis == 0) {
           throw new Error("Error al Insertar en Listado");
@@ -70232,10 +70242,10 @@ var require_serviceVentas = __commonJS({
         var lineaDet = [];
         var detalle = [];
         const page = workbook.sheet(0).name();
-        console.log(page);
+        console.log("Trabajando en primer p\xE1gina:", page);
         for (let index = desde; index < hasta; index++) {
           lineaDet = {};
-          lineaDet.Id = index - desde;
+          lineaDet.Id = index - desde + 1;
           if (objExcel.Articulo) {
             art = workbook.sheet(page).cell(objExcel.Articulo + index.toString()).value();
             lineaDet.Articulo = art ? art : "";
@@ -70289,40 +70299,11 @@ var require_serviceVentas = __commonJS({
         return null;
       }
     }
-    var deleteListadoByIdEntidad = async (idEntidad) => {
-      const connection = await conn;
-      try {
-        await connection.beginTransaction();
-        const sql = "SELECT idListado FROM listado WHERE idEntidad = ?;";
-        const [rows] = await connection.execute(sql, [idEntidad]);
-        const rows2 = rows.map((p) => p.idListado);
-        const rows3 = "(" + rows2.join(",") + ")";
-        if (rows.length >= 1) {
-          const sqlLisdet = "DELETE FROM lisdet WHERE idListado IN " + rows3 + " ;";
-          console.log(sqlLisdet);
-          await connection.execute(sqlLisdet);
-          const sqlListado = "DELETE FROM listado WHERE idListado IN " + rows3 + " ;";
-          console.log(sqlListado, rows3);
-          await connection.execute(sqlListado);
-          await connection.commit();
-          console.log("Registros eliminados correctamente.");
-        } else {
-          console.log("No se encotraron listados de Entidad:" + idEntidad);
-        }
-      } catch (error2) {
-        await connection.rollback();
-        console.error("Error al eliminar registros, se ha hecho rollback:", error2);
-        return false;
-      } finally {
-        console.log("Sin listados de Entidad:" + idEntidad);
-        return true;
-      }
-    };
     var insertListado = (nombre, promo, fecha2, idEntidad) => {
       return new Promise(async (resolve, reject2) => {
-        const sql = "INSERT INTO listado (nombre, Promo,Fecha, idEntidad) VALUES (?,?,STR_TO_DATE( ? , '%d/%m/%Y'),?);";
+        const sql = "INSERT INTO listado (Nombre, Promo,Fecha, idEntidad) VALUES (?,?,STR_TO_DATE( ? , '%d/%m/%Y'),?);";
         try {
-          const [result] = await (await conn).execute(sql, [nombre, promo, fecha2, idEntidad]);
+          const [result] = await (await pool).execute(sql, [nombre, promo, fecha2, idEntidad]);
           const idLis = result.insertId;
           if (!idLis || idLis == 0) {
             throw new Error("Error al Insertar en Listado");
@@ -70335,9 +70316,10 @@ var require_serviceVentas = __commonJS({
       });
     };
     var insertListadoDetalle = (sql, obj) => {
+      console.log(sql, obj);
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).query(sql, obj);
+          const result = await (await pool).query(sql, obj);
           resolve(result);
         } catch (error2) {
           reject2(error2);
@@ -70345,9 +70327,7 @@ var require_serviceVentas = __commonJS({
       });
     };
     async function InsertarDesdeExcel(objExcel) {
-      if (!await deleteListadoByIdEntidad(objExcel.idEntidad)) {
-        return null;
-      }
+      console.log(objExcel);
       const lectura = await leerDesdeExcel(objExcel);
       const nom = objExcel.Nombre ? objExcel.Nombre : "";
       const promo = objExcel.Promo ? objExcel.Promo : "";
@@ -70357,9 +70337,10 @@ var require_serviceVentas = __commonJS({
       let v2 = colu.filter((j) => Object.keys(objExcel).find((key) => objExcel[key] == j));
       let v3 = v2.filter((k) => k !== void 0);
       let values = v3.map((valor) => Object.keys(objExcel).find((key) => objExcel[key] === valor));
-      values.unshift("IdListado");
+      values.unshift("idListado");
       const valores = values.map(() => "?").join(", ");
       const reg = lectura.detalle.map((w) => lectura.titulo.map((p) => w[p]));
+      console.log("reggggg", reg);
       try {
         insertListado(nom, promo, fecha2, idEnt).then((idList) => {
           let reg2 = reg.map((j) => [idList, ...j]);
@@ -70367,19 +70348,23 @@ var require_serviceVentas = __commonJS({
           reg2.forEach((p) => {
             insertListadoDetalle(query, p).then(
               (res) => {
+                console.log("registro", p, "res", res);
               }
-            ).catch((err) => console.error(err));
+            ).catch(
+              (err) => console.error(err)
+              // ( pool).rollback
+            );
           });
           return lectura;
         });
       } catch (error2) {
-        console.log(error2);
+        console.error("Error:", error2.message);
       }
     }
     var insertarComprobanteDetalle = (sql, det, idComp) => {
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).query(sql, [idComp, det.idLisDet, det.Cantidad ? det.Cantidad : det.Cant, det.Articulo, det.Descripcion, det.Precio ? det.Precio : det.precio]);
+          const result = await (await pool).query(sql, [idComp, det.idLisDet, det.Cantidad ? det.Cantidad : det.Cant, det.Articulo, det.Descripcion, det.Precio ? det.Precio : det.precio]);
           resolve(result);
         } catch (error2) {
           reject2(error2);
@@ -70397,7 +70382,7 @@ var require_serviceVentas = __commonJS({
       }
       const sql = "INSERT INTO comprobante (Fecha,idCompAsoc,Tipo,Circuito,idEntidadPro,idEntidadVia,idEntidadCli,FormaPago,Condicion,Observacion,impNeto,impTotal) VALUES (STR_TO_DATE( ? , '%d/%m/%Y'),?,?,?,?,?,?,?,?,?,?,?);";
       try {
-        const [result] = await (await conn).query(sql, [c.Fecha, 0, c.Tipo, c.Circuito, c.idEntidadPro, c.idEntidadVia, c.idEntidadCli, c.FormaPago, c.Condicion, c.Observacion, c.impNeto, c.impTotal]);
+        const [result] = await (await pool).query(sql, [c.Fecha, 0, c.Tipo, c.Circuito, c.idEntidadPro, c.idEntidadVia, c.idEntidadCli, c.FormaPago, c.Condicion, c.Observacion, c.impNeto, c.impTotal]);
         const idComp = result.insertId;
         if (!idComp || idComp == 0) {
           throw new error("Error al Insertar en Comprobante" + c.Tipo);
@@ -70424,7 +70409,7 @@ var require_serviceVentas = __commonJS({
       }
       const sql = "INSERT INTO comprobante (Fecha,idCompAsoc,Tipo,Circuito,idEntidadPro,idEntidadVia,idEntidadCli,FormaPago,Condicion,Observacion,impNeto,impTotal) VALUES (STR_TO_DATE( ? , '%d/%m/%Y'),?,?,?,?,?,?,?,?,?,?,?);";
       try {
-        const [result] = await (await conn).query(sql, [c.Fecha, c.idComprobante, "Factura", c.Circuito, c.IdEntidadPro, c.IdEntidadVia, c.idEntidadCli, c.FormaPago, c.Condicion, c.Observacion, c.impNeto ? c.impNeto : c.ImpNeto, c.impTotal ? c.impTotal : c.ImpTotal]);
+        const [result] = await (await pool).query(sql, [c.Fecha, c.idComprobante, "Factura", c.Circuito, c.IdEntidadPro, c.IdEntidadVia, c.idEntidadCli, c.FormaPago, c.Condicion, c.Observacion, c.impNeto ? c.impNeto : c.ImpNeto, c.impTotal ? c.impTotal : c.ImpTotal]);
         const idComp = result.insertId;
         if (!idComp || idComp == 0) {
           throw new error("Error al Insertar en Cabecera de Factura");
@@ -70444,7 +70429,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select * from notapedidonofacturada;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql);
+          const result = await (await pool).execute(sql);
           resolve(result[0]);
         } catch (error2) {
           reject2(error2);
@@ -70455,7 +70440,7 @@ var require_serviceVentas = __commonJS({
       const sql = " select * from  notapedidofacturada;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql);
+          const result = await (await pool).execute(sql);
           resolve(result[0]);
         } catch (error2) {
           reject2(error2);
@@ -70466,7 +70451,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select  c.idComprobante, c.idCompAsoc ,case when year(c.fecha) <1 then 'Sin especificar' else DATE_FORMAT( c.fecha, '%d/%m/%Y') end as Fecha, c.ImpTotal,ep.Denominacion as Provedor, ec.Denominacion as Cliente, ev.Denominacion as Viajante from comprobante c join entidad EP on EP.idEntidad = c.IdEntidadPro join entidad EC on Ec.idEntidad = c.IdEntidadCli left join entidad EV on EV.idEntidad = c.IdEntidadvia where C.Tipo like '%Factura%' and c.FechaP=''  order by  ep.Denominacion, c.fecha;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql);
+          const result = await (await pool).execute(sql);
           console.log("result", result[0]);
           if (result) {
             resolve(result[0]);
@@ -70480,7 +70465,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select  c.idComprobante, c.idCompAsoc ,case when year(c.fecha) <1 then 'Sin especificar' else DATE_FORMAT( c.fecha, '%d/%m/%Y') end as Fecha, c.ImpTotal,ep.Denominacion as Provedor, ec.Denominacion as Cliente, ev.Denominacion as Viajante from comprobante c join entidad EP on EP.idEntidad = c.IdEntidadPro join entidad EC on Ec.idEntidad = c.IdEntidadCli left join entidad EV on EV.idEntidad = c.IdEntidadvia where C.tipo like '%Factura%' and c.fechap <> ''  order by  ep.Denominacion, c.fecha;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql);
+          const result = await (await pool).execute(sql);
           resolve(result[0]);
         } catch (error2) {
           reject2(error2);
@@ -70491,7 +70476,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select c.*, case when year(c.fecha) <1 then 'Sin especificar' else DATE_FORMAT( c.fecha, '%d/%m/%Y') end as Fecha, Cast(c.ImpTotal as double) as ImpTotal,  ep.Denominacion as Provedor,  ec.Denominacion as Cliente,  case when Vi.Denominacion is null then 'Sin Especificar' else Vi.Denominacion end as Viajante  from comprobante c join entidad EP on EP.idEntidad = c.IdEntidadPro join entidad EC on Ec.idEntidad = c.IdEntidadCli left join entidad Vi on Vi.idEntidad = c.IdEntidadVia where c.idComprobante = ? ;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [id]);
+          const result = await (await pool).execute(sql, [id]);
           resolve(result[0][0]);
         } catch (error2) {
           reject2(error2);
@@ -70502,7 +70487,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select  * FROM compdet where idComprobante = ? ;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [id]);
+          const result = await (await pool).execute(sql, [id]);
           console.log("result detalle", result[0][0]);
           resolve(result[0]);
         } catch (error2) {
@@ -70515,7 +70500,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select  Case when re.NroCli is  null  then 'Sin Asignar' else  re.NroCli end as NroCliente FROM relacionentidad re  where re.idEntP = ? and re.idEntC = ? ;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [idP, idC]);
+          const result = await (await pool).execute(sql, [idP, idC]);
           resolve(result[0][0]);
         } catch (error2) {
           reject2(error2);
@@ -70550,7 +70535,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select re.idRelacion, re.idEntP as codProvedor, ep.Denominacion as Provedor, re.idEntP as codCliente, ec.Denominacion as Cliente, re.NroCli as NroCli  from relacionentidad re  join entidad ep on ep.idEntidad = re.idEntP join entidad ec on ec.identidad = re.idEntC order by ep.Denominacion,ec.Denominacion";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql);
+          const result = await (await pool).execute(sql);
           resolve(result[0]);
         } catch (error2) {
           reject2(error2);
@@ -70561,7 +70546,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select re.idRelacion,re.NroCli as NroCliente,ep.Denominacion as provedor,ec.Denominacion as cliente from relacionentidad re join entidad ec on ec.idEntidad = re.idEntC, join entidad ep on ep.idEntidad=re.idEntP where re.idEntP=?;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [prov]);
+          const result = await (await pool).execute(sql, [prov]);
           resolve(result[0]);
         } catch (error2) {
           reject2(error2);
@@ -70572,7 +70557,7 @@ var require_serviceVentas = __commonJS({
       const sql = "select idRelacion FROM relacionentidad where idEntP= ? and idEntC= ?";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [prov, cli]);
+          const result = await (await pool).execute(sql, [prov, cli]);
           resolve(result[0][0]);
         } catch (error2) {
           reject2(error2);
@@ -70583,7 +70568,7 @@ var require_serviceVentas = __commonJS({
       const sql = "INSERT INTO relacionentidad (idEntP,idEntC,NroCli) values(?,?,?)";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [prov, cli, nroCli]);
+          const result = await (await pool).execute(sql, [prov, cli, nroCli]);
           console.log("Agregar relacion result[0]", result[0]);
           resolve(result[0]);
         } catch (error2) {
@@ -70595,7 +70580,7 @@ var require_serviceVentas = __commonJS({
       const sql = "update relacionentidad set NroCli=? where idRelacion=?;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [nrocli, idRelacion]);
+          const result = await (await pool).execute(sql, [nrocli, idRelacion]);
           console.log(result, result[0]);
           resolve(result[0]);
         } catch (error2) {
@@ -70607,7 +70592,7 @@ var require_serviceVentas = __commonJS({
       const sql = "delete from relacionentidad  where idRelacion=?;";
       return new Promise(async (resolve, reject2) => {
         try {
-          const result = await (await conn).execute(sql, [idRelacion]);
+          const result = await (await pool).execute(sql, [idRelacion]);
           console.log("eliminar relacion result", result, "Result[0]", result[0]);
           resolve(result[0]);
         } catch (error2) {
@@ -70648,6 +70633,7 @@ var require_serviceVentas = __commonJS({
       getEntidadesViajantes,
       getEntidadesOtros,
       createEntidad,
+      updateEntidad,
       noExisteCuit,
       estadoEntidad,
       actualizarEstadoEntidad,
@@ -70710,7 +70696,8 @@ var require_ventasController = __commonJS({
       EliminarRelacion,
       AddSiExisteRelacion,
       GetRelaciones,
-      insertarComprobanteFactura
+      insertarComprobanteFactura,
+      updateEntidad
     } = require_serviceVentas();
     var EntRelationDel = async (req, res) => {
       const { idRelacion } = req.body;
@@ -70865,10 +70852,9 @@ var require_ventasController = __commonJS({
       }
     };
     var insertarEntidad = async (req, res) => {
-      const { Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2 } = req.body;
+      const { idEntidad, Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2 } = req.body;
       console.log("controller insertarEntidad", Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2);
       const check = await noExisteCuit(Cuit);
-      console.log("check noexistecuit- controller", check);
       if (check == "OK") {
         try {
           const resp = await createEntidad(Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2);
@@ -70882,7 +70868,19 @@ var require_ventasController = __commonJS({
           console.log(error);
         }
       } else {
-        res.status(200).json({ ok: false, status: 200, message: check });
+        try {
+          const resp = await updateEntidad(idEntidad, Tipo, Denominacion, RazonSocial, Iva, Domicilio, Localidad, Provincia, Transporte, Email, Dni, Cuit, Telefono, Contacto1, Contacto2);
+          console.log(resp, resp.affectedRows, resp.changedRows);
+          if (resp.affectedRows == 1) {
+            if (resp.changedRows == 1) {
+              res.status(200).json({ Ok: true, "Entidad nro: ": idEntidad, message: " actualizada exitosamente!" });
+            } else {
+              res.status(200).json({ Ok: true, "Entidad nro: ": idEntidad, message: " sin modificaciones !" });
+            }
+          }
+        } catch (error) {
+          console.log(error);
+        }
       }
     };
     var getestadoEntidad = async (req, res) => {
@@ -70946,11 +70944,11 @@ var require_ventasController = __commonJS({
       try {
         if (dataExcel) {
           const listado = await InsertarDesdeExcel(dataExcel);
+          console.log("---------------", listado);
           if (listado) {
-            console.log(listado);
             res.status(200).json({ status: 200, message: "Lectura finalizada correctamente", Listado: listado });
           } else {
-            res.status(404).json({ status: 400, message: "Error lectura ", listado: null });
+            res.status(400).json({ status: 400, message: "Error lectura ", listado: null });
           }
         }
       } catch (error) {
@@ -71155,11 +71153,11 @@ app.use(express.static(__dirname + "/public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.get("/", (req, res) => {
-  res.json({ "conected": "Ok", message: "Bienvenido al sistema de ventas Jorge Martinez" });
+  res.json({ "Servidor": "Ok", Mensaje: "Bienvenido al sistema de ventas Jorge Martinez" });
 });
 app.use("/api", ventasRouter);
 app.listen(process.env.PORT, () => {
-  console.log("Server listening on http://localhost:" + PORT);
+  console.log("Servidor activo en http://localhost:" + PORT);
 });
 /*! Bundled license information:
 

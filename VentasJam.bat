@@ -2,13 +2,14 @@
 @echo *********  Bienvenido Lolo !!! *********
 @echo **     Programa Master Inicializado   **
 @echo ****************************************
-
+@echo  Hacer click en Admin en fila de Apache y Mysql
 ::cd /d "C:\Program Files\xampp"
 cd /d "C:\xampp"
 start xampp-control.exe
 
 
 :: actualizar copia 
+@echo Actualizando .......
 cd /d "C:\sistemas\jam"
 git pull
 @echo Actualizando ........
